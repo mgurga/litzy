@@ -1,0 +1,15 @@
+
+// var, num = lc3 16 bit number
+// string = lc3 .STRINGZ
+// bool = 0 (false) or 1 (true)
+
+header "User Name" "email@server.org" "lab 3, ex 2" "22"
+
+; lc3 comment
+void main() {
+    print "hello world"
+    var myvar = 3
+    myvar++
+    myvar++
+    print myvar
+}
