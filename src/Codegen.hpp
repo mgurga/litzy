@@ -83,6 +83,7 @@ public:
 
     std::string compute_statement(std::string name, std::vector<std::string> args) {
         std::string out = "";
+
         if (name == "Print") {
             out += backup();
             std::string printval = args.at(0);
@@ -100,22 +101,26 @@ public:
                 out += indent + "PUTS\n";
             }
             out += restore();
-            return out;
         } else if (name == "SetVariable") {
             std::string reg = b.create_binding(args.at(0));
             out += indent + "LD " + reg + ", " + add_label(args.at(1)) + "\n";
-            return out;
         } else if (name == "Increment") {
             std::string reg = b.get_var_binding(args.at(0));
             out += indent + "ADD " + reg + ", " + reg + ", #1";
-            return out;
         } else if (name == "Decrement") {
             std::string reg = b.get_var_binding(args.at(0));
             out += indent + "ADD " + reg + ", " + reg + ", #-1";
-            return out;
+        } else if (name == "GoToLabel") {
+            std::string label = args.at(0);
+            std::transform(label.begin(), label.end(), label.begin(), ::toupper);
+            out += label;
+        } else if (name == "GoTo") {
+            std::string label = args.at(0);
+            std::transform(label.begin(), label.end(), label.begin(), ::toupper);
+            out += indent + "BR " + label;
         }
 
-        return "";
+        return out;
     }
 
     std::string backup(std::string reg = "R0") {

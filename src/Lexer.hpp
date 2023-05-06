@@ -38,46 +38,41 @@ public:
                 if (line.at(0) == '/' && line.at(1) == '/') continue;  // comment line
                 if (line.at(0) == ';') {
                     add_statement(Statement("Lc3Comment", {line.substr(0, line.size())}));
-                    continue;
-                }
-                // section/function opening
-                if (line.find("{") != std::string::npos && line.find("if") == std::string::npos) {
+                } else if (line.find("{") != std::string::npos &&
+                           line.find("if") == std::string::npos) {  // section/function opening
                     std::string sdef = line.substr(0, line.find("{"));
                     std::vector<std::string> spart = Utils::split(sdef, ' ');
                     wscope.returns = Utils::split(spart.at(0), ',');
                     wscope.name = Utils::split(spart.at(1), '(').at(0);
                     inwscope = true;
-                    continue;
-                }
-                // section/function closing
-                if (line.find("}") != std::string::npos) {
+                } else if (line.find("}") != std::string::npos) {  // section/function closing
                     inwscope = false;
                     end_lex.push_back(wscope);
                     wscope = Scope();
-                    continue;
-                }
-                if (line.substr(0, 5) == "print") {
-                    add_statement(Statement("Print", {line.substr(5, line.size())}));
-                    continue;
-                }
-                if (line.substr(0, 6) == "header") {
+                } else if (line.substr(0, 5) == "print") {
+                    add_statement(Statement("Print", {line.substr(6, line.size())}));
+                } else if (line.substr(0, 4) == "goto") {
+                    add_statement(Statement("GoTo", {line.substr(5, line.size())}));
+                } else if (line.substr(0, 6) == "header") {
                     std::vector<std::string> spart = Utils::split(line, ' ');
                     spart.erase(spart.begin());
                     add_statement(Statement("Header", spart));
-                }
-                if (line.substr(0, 3) == "var") {
+                } else if (line.substr(0, 3) == "var") {
                     std::vector<std::string> spart = Utils::split(line, ' ');
                     std::string varval = Utils::split(line, '=').at(1);
                     while (varval.at(0) == ' ') varval.erase(0, 1);
                     variables.push_back(spart.at(1));
                     add_statement(Statement("SetVariable", {spart.at(1), varval}));
-                }
-                // check for variable commands
-                for (std::string v : variables) {
-                    if (line.substr(0, v.size()) == v) {
-                        line = line.substr(v.size(), line.size() - v.size());
-                        if (line == "++") { add_statement(Statement("Increment", {v})); }
-                        if (line == "--") { add_statement(Statement("Decrement", {v})); }
+                } else if (line.back() == ':') {
+                    add_statement(Statement("GoToLabel", {line.substr(0, line.size() - 1)}));
+                } else {
+                    // check for variable commands
+                    for (std::string v : variables) {
+                        if (line.substr(0, v.size()) == v) {
+                            line = line.substr(v.size(), line.size() - v.size());
+                            if (line == "++") { add_statement(Statement("Increment", {v})); }
+                            if (line == "--") { add_statement(Statement("Decrement", {v})); }
+                        }
                     }
                 }
             } catch (std::exception& e) {
