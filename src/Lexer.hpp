@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <queue>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -22,6 +23,7 @@ public:
         Scope wscope = Scope();  // working scope
         bool inwscope = false;
         std::vector<std::string> variables;
+        std::queue<std::vector<std::string>> ifblocks;
 
         auto add_statement = [&](Statement s) {
             if (inwscope)
@@ -45,11 +47,15 @@ public:
                     wscope.returns = Utils::split(spart.at(0), ',');
                     wscope.name = Utils::split(spart.at(1), '(').at(0);
                     inwscope = true;
-                } else if (line.find("}") != std::string::npos &&
-                           inwscope) {  // section/function closing
-                    inwscope = false;
-                    end_lex.push_back(wscope);
-                    wscope = Scope();
+                } else if (line.find("}") != std::string::npos) {  // section/function closing
+                    if (ifblocks.empty()) {
+                        inwscope = false;
+                        end_lex.push_back(wscope);
+                        wscope = Scope();
+                    } else {
+                        add_statement(Statement("EndIf", {ifblocks.back().at(1)}));
+                        ifblocks.pop();
+                    }
                 } else if (line.substr(0, 5) == "print") {
                     add_statement(Statement("Print", {line.substr(6, line.size())}));
                 } else if (line.substr(0, 4) == "goto") {
@@ -80,7 +86,24 @@ public:
                         while (lha.at(lha.size() - 1) == ' ') lha.pop_back();
                         while (rha.at(rha.size() - 1) == ' ') rha.pop_back();
 
-                        add_statement(Statement("IfEquals", {lha, rha}));
+                        std::string ifid = "IfEquals_" + Utils::random_str(10);
+                        ifblocks.push({"IfEquals", ifid, lha, rha});
+                        add_statement(Statement("IfEquals", {ifid, lha, rha}));
+                    } else if (line.find("!=") != std::string::npos) {
+                        std::string lha = line.substr(0, line.find("!="));
+                        std::string rha = line.substr(line.find("!=") + 2, line.size());
+
+                        // delete trailing spaces
+                        while (lha.at(0) == ' ') lha.erase(0, 1);
+                        while (rha.at(0) == ' ') rha.erase(0, 1);
+
+                        // delete following spaces
+                        while (lha.at(lha.size() - 1) == ' ') lha.pop_back();
+                        while (rha.at(rha.size() - 1) == ' ') rha.pop_back();
+
+                        std::string ifid = "IfNotEquals_" + Utils::random_str(10);
+                        ifblocks.push({"IfNotEquals", ifid, lha, rha});
+                        add_statement(Statement("IfNotEquals", {ifid, lha, rha}));
                     }
                 } else {
                     // check for variable commands

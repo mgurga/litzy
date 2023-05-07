@@ -25,7 +25,7 @@ std::string Codegen::add_label(std::string value) {
         return lname;
     }
     std::cout << "could not create label from " << value << std::endl;
-    return "";
+    return value;
 }
 
 std::string Codegen::create_labels() {

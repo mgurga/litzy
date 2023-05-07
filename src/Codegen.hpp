@@ -14,7 +14,7 @@ class Bindings {
 public:
     Bindings() {}
 
-    const std::vector<std::string> registers{"R1", "R2", "R3", "R4", "R5"};
+    const std::vector<std::string> registers{"R1", "R2", "R3", "R4"};
 
     std::unordered_map<std::string /* variable name */, std::string /* register */> bindings;
 
@@ -70,6 +70,7 @@ public:
                 else
                     out += indent + "RET\n\n";
                 out += indent + "NEWLINE .FILL x0A\n";
+                out += indent + "        .FILL #0";
                 out += indent + "STACK_ADDR .FILL xFE00\n";
                 out += create_labels();
                 labels.clear();
@@ -86,6 +87,7 @@ public:
 
         if (name == "Print") {
             out += backup();
+            out += backup("R7");
             std::string printval = args.at(0);
             while (printval.at(0) == ' ') printval.erase(0, 1);
             if (b.contains_var(printval)) {
@@ -96,10 +98,14 @@ public:
                 out += indent + "ADD R0, R0, #12\n";
                 out += indent + "ADD R0, R0, #12\n";
                 out += indent + "OUT\n";
+            } else if (printval == "newline") {
+                out += indent + "LEA R0, NEWLINE\n";
+                out += indent + "PUTS\n";
             } else {
                 out += indent + "LEA R0, " + add_label(printval) + "\n";
                 out += indent + "PUTS\n";
             }
+            out += restore("R7");
             out += restore();
         } else if (name == "SetVariable") {
             std::string reg = b.create_binding(args.at(0));
@@ -118,6 +124,62 @@ public:
             std::string label = args.at(0);
             std::transform(label.begin(), label.end(), label.begin(), ::toupper);
             out += indent + "BR " + label;
+        } else if (name == "IfEquals") {
+            out += backup("R0");
+            out += backup("R1");
+
+            if (b.contains_var(args.at(1))) {
+                out += indent + "ADD R0, " + b.get_var_binding(args.at(1)) + ", #0\n";
+            } else {
+                std::string l = add_label(args.at(1));
+                out += indent + "LD R0, " + l + "\n";
+            }
+
+            if (b.contains_var(args.at(2))) {
+                out += indent + "ADD R1, " + b.get_var_binding(args.at(2)) + ", #0\n";
+            } else {
+                std::string l = add_label(args.at(2));
+                out += indent + "LD R1, " + l + "\n";
+            }
+
+            out += indent + "NOT R1, R1\n";
+            out += indent + "ADD R1, R1, #1\n";
+            out += indent + "ADD R5, R0, R1\n";
+
+            out += restore("R1");
+            out += restore("R0");
+
+            out += indent + "ADD R5, R5, #0\n";
+            out += indent + "BRnp " + args.at(0) + "_END\n";
+        } else if (name == "IfNotEquals") {
+            out += backup("R0");
+            out += backup("R1");
+
+            if (b.contains_var(args.at(1))) {
+                out += indent + "ADD R0, " + b.get_var_binding(args.at(1)) + ", #0\n";
+            } else {
+                std::string l = add_label(args.at(1));
+                out += indent + "LD R0, " + l + "\n";
+            }
+
+            if (b.contains_var(args.at(2))) {
+                out += indent + "ADD R1, " + b.get_var_binding(args.at(2)) + ", #0\n";
+            } else {
+                std::string l = add_label(args.at(2));
+                out += indent + "LD R1, " + l + "\n";
+            }
+
+            out += indent + "NOT R1, R1\n";
+            out += indent + "ADD R1, R1, #1\n";
+            out += indent + "ADD R5, R0, R1\n";
+
+            out += restore("R1");
+            out += restore("R0");
+
+            out += indent + "ADD R5, R5, #0\n";
+            out += indent + "BRz " + args.at(0) + "_END\n";
+        } else if (name == "EndIf") {
+            out += args.at(0) + "_END\n";
         }
 
         return out;
