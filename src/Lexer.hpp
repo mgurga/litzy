@@ -45,7 +45,8 @@ public:
                     wscope.returns = Utils::split(spart.at(0), ',');
                     wscope.name = Utils::split(spart.at(1), '(').at(0);
                     inwscope = true;
-                } else if (line.find("}") != std::string::npos) {  // section/function closing
+                } else if (line.find("}") != std::string::npos &&
+                           inwscope) {  // section/function closing
                     inwscope = false;
                     end_lex.push_back(wscope);
                     wscope = Scope();
@@ -65,6 +66,22 @@ public:
                     add_statement(Statement("SetVariable", {spart.at(1), varval}));
                 } else if (line.back() == ':') {
                     add_statement(Statement("GoToLabel", {line.substr(0, line.size() - 1)}));
+                } else if (line.substr(0, 2) == "if" && line.back() == '{') {
+                    line = line.substr(3, line.size() - 4);
+                    if (line.find("==") != std::string::npos) {
+                        std::string lha = line.substr(0, line.find("=="));
+                        std::string rha = line.substr(line.find("==") + 2, line.size());
+
+                        // delete trailing spaces
+                        while (lha.at(0) == ' ') lha.erase(0, 1);
+                        while (rha.at(0) == ' ') rha.erase(0, 1);
+
+                        // delete following spaces
+                        while (lha.at(lha.size() - 1) == ' ') lha.pop_back();
+                        while (rha.at(rha.size() - 1) == ' ') rha.pop_back();
+
+                        add_statement(Statement("IfEquals", {lha, rha}));
+                    }
                 } else {
                     // check for variable commands
                     for (std::string v : variables) {
